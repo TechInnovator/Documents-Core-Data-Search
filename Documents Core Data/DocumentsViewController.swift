@@ -9,12 +9,14 @@
 import UIKit
 import CoreData
 
-class DocumentsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class DocumentsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchResultsUpdating {
     @IBOutlet weak var documentsTableView: UITableView!
     
     let dateFormatter = DateFormatter()
     
     var documents = [Document]()
+    
+    let searchController = UISearchController(searchResultsController: nil)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,9 +25,19 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
 
         dateFormatter.dateStyle = .medium
         dateFormatter.timeStyle = .medium
+        
+        searchController.searchResultsUpdater = self
+        searchController.obscuresBackgroundDuringPresentation = false
+        searchController.searchBar.placeholder = "Search Documents"
+        navigationItem.searchController = searchController
+        definesPresentationContext = true
     }
     
     override func viewWillAppear(_ animated: Bool) {
+        fetchDocuments(searchString: "")
+    }
+    
+    func fetchDocuments(searchString: String) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             return
         }
@@ -33,11 +45,30 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         let fetchRequest: NSFetchRequest<Document> = Document.fetchRequest()
         
         do {
+            if (searchString != "") {
+                fetchRequest.predicate = NSPredicate(format: "name contains[c] %@ OR content contains[c] %@", searchString, searchString)
+            }
+            
             documents = try managedContext.fetch(fetchRequest)
+
             documentsTableView.reloadData()
         } catch {
             print("Fetch could not be performed")
         }
+    }
+    
+    func updateSearchResults(for searchController: UISearchController) {
+        if let searchText = searchController.searchBar.text {
+            filterContentForSearchText(searchText)
+            documentsTableView.reloadData()
+        }
+    }
+    
+    func filterContentForSearchText(_ searchText: String, scope: String = "All") {
+        //let searchString = searchText.lowercased()
+        let searchString = searchText
+        
+        fetchDocuments(searchString: searchString)
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -102,5 +133,4 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
             deleteDocument(at: indexPath)
         }
     }
-
 }
