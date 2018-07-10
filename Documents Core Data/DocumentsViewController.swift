@@ -14,7 +14,7 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
     
     let dateFormatter = DateFormatter()
     var documents = [Document]()
-    let searchController = UISearchController(searchResultsController: nil)
+    var searchController : UISearchController?
     var selectedSearchScope = SearchScope.all
 
     override func viewDidLoad() {
@@ -25,14 +25,20 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         dateFormatter.dateStyle = .medium
         dateFormatter.timeStyle = .medium
         
-        searchController.searchResultsUpdater = self
-        searchController.obscuresBackgroundDuringPresentation = false
-        searchController.searchBar.placeholder = "Search Documents"
+        searchController = UISearchController(searchResultsController: nil)
+        
+        searchController?.searchResultsUpdater = self
+        searchController?.obscuresBackgroundDuringPresentation = false
+        searchController?.searchBar.placeholder = "Search Documents"
+        
+        //searchController.searchBar.searchBarStyle = .minimal
         navigationItem.searchController = searchController
+        // alterantively the searchBar can be placed in the tableHeaderView of the Table View
+        // documentsTableView.tableHeaderView = searchController.searchBar
         definesPresentationContext = true
         
-        searchController.searchBar.scopeButtonTitles = SearchScope.titles
-        searchController.searchBar.delegate = self
+        searchController?.searchBar.scopeButtonTitles = SearchScope.titles
+        searchController?.searchBar.delegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -72,10 +78,36 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
     
     func searchBar(_ searchBar: UISearchBar, selectedScopeButtonIndexDidChange selectedScope: Int) {
         selectedSearchScope = SearchScope.scopes[selectedScope]
-        if let searchString = searchController.searchBar.text {
+        if let searchString = searchController?.searchBar.text {
             fetchDocuments(searchString: searchString)
         }
     }
+    
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+
+        self.searchController?.dismiss(animated: true, completion: {
+            () in
+            print("Did complete")
+            self.searchController?.isActive = false
+            
+        })
+        
+        /*
+        DispatchQueue.main.async {
+            self.searchController?.isActive = false
+            
+            self.searchController?.dismiss(animated: true, completion: {
+                () in
+                print("Did complete")
+            })
+            
+            //self.searchController.isActive = false
+            // self.navigationController?.navigationBar.topItem?.title = "Documents"
+            //self.navigationItem.titleView = nil
+        }
+        */
+    }
+    
     
     func numberOfSections(in tableView: UITableView) -> Int {
         return 1
