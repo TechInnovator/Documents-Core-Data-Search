@@ -9,14 +9,13 @@
 import UIKit
 import CoreData
 
-class DocumentsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchResultsUpdating {
+class DocumentsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchResultsUpdating, UISearchBarDelegate {
     @IBOutlet weak var documentsTableView: UITableView!
     
     let dateFormatter = DateFormatter()
-    
     var documents = [Document]()
-    
     let searchController = UISearchController(searchResultsController: nil)
+    var selectedSearchScope = SearchScope.all
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -31,6 +30,9 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         searchController.searchBar.placeholder = "Search Documents"
         navigationItem.searchController = searchController
         definesPresentationContext = true
+        
+        searchController.searchBar.scopeButtonTitles = SearchScope.titles
+        searchController.searchBar.delegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -46,11 +48,16 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         
         do {
             if (searchString != "") {
-                fetchRequest.predicate = NSPredicate(format: "name contains[c] %@ OR content contains[c] %@", searchString, searchString)
+                switch (selectedSearchScope) {
+                case .all:
+                    fetchRequest.predicate = NSPredicate(format: "name contains[c] %@ OR content contains[c] %@", searchString, searchString)
+                case .name:
+                    fetchRequest.predicate = NSPredicate(format: "name contains[c] %@", searchString)
+                case .content:
+                    fetchRequest.predicate = NSPredicate(format: "content contains[c] %@", searchString)
+                }
             }
-            
             documents = try managedContext.fetch(fetchRequest)
-
             documentsTableView.reloadData()
         } catch {
             print("Fetch could not be performed")
@@ -58,17 +65,16 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
     }
     
     func updateSearchResults(for searchController: UISearchController) {
-        if let searchText = searchController.searchBar.text {
-            filterContentForSearchText(searchText)
-            documentsTableView.reloadData()
+        if let searchString = searchController.searchBar.text {
+            fetchDocuments(searchString: searchString)
         }
     }
     
-    func filterContentForSearchText(_ searchText: String, scope: String = "All") {
-        //let searchString = searchText.lowercased()
-        let searchString = searchText
-        
-        fetchDocuments(searchString: searchString)
+    func searchBar(_ searchBar: UISearchBar, selectedScopeButtonIndexDidChange selectedScope: Int) {
+        selectedSearchScope = SearchScope.scopes[selectedScope]
+        if let searchString = searchController.searchBar.text {
+            fetchDocuments(searchString: searchString)
+        }
     }
     
     func numberOfSections(in tableView: UITableView) -> Int {
@@ -92,7 +98,6 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
             } else {
                 cell.modifiedLabel.text = "unknown"
             }
-            
         }
         
         return cell
