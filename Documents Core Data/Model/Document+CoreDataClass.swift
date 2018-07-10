@@ -24,7 +24,7 @@ public class Document: NSManagedObject {
     convenience init?(name: String?, content: String?) {
         let appDelegate = UIApplication.shared.delegate as? AppDelegate  //UIKit is needed to access UIApplication
         guard let managedContext = appDelegate?.persistentContainer.viewContext,
-            let name = name else {
+            let name = name, name != "" else {
                 return nil
         }
         self.init(entity: Document.entity(), insertInto: managedContext)
