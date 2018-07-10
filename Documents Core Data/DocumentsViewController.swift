@@ -34,7 +34,7 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         //searchController.searchBar.searchBarStyle = .minimal
         navigationItem.searchController = searchController
         // alterantively the searchBar can be placed in the tableHeaderView of the Table View
-        // documentsTableView.tableHeaderView = searchController.searchBar
+        // documentsTableView.tableHeaderView = searchController?.searchBar
         definesPresentationContext = true
         
         searchController?.searchBar.scopeButtonTitles = SearchScope.titles
