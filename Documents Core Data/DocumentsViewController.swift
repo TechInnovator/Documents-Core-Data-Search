@@ -11,7 +11,6 @@ import CoreData
 
 class DocumentsViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, UISearchResultsUpdating, UISearchBarDelegate {
     @IBOutlet weak var documentsTableView: UITableView!
-    
     let dateFormatter = DateFormatter()
     var documents = [Document]()
     var searchController : UISearchController?
@@ -31,10 +30,10 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         searchController?.obscuresBackgroundDuringPresentation = false
         searchController?.searchBar.placeholder = "Search Documents"
         
-        //searchController.searchBar.searchBarStyle = .minimal
         navigationItem.searchController = searchController
         // alterantively the searchBar can be placed in the tableHeaderView of the Table View
         // documentsTableView.tableHeaderView = searchController?.searchBar
+        
         definesPresentationContext = true
         
         searchController?.searchBar.scopeButtonTitles = SearchScope.titles
@@ -45,12 +44,23 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         fetchDocuments(searchString: "")
     }
     
+    func alertNotifyUser(message: String) {
+        let alert = UIAlertController(title: "Alert", message: message, preferredStyle: UIAlertControllerStyle.alert)
+        alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.cancel) {
+            (alertAction) -> Void in
+            print("OK selected")
+        })
+        
+        self.present(alert, animated: true, completion: nil)
+    }
+    
     func fetchDocuments(searchString: String) {
         guard let appDelegate = UIApplication.shared.delegate as? AppDelegate else {
             return
         }
         let managedContext = appDelegate.persistentContainer.viewContext
         let fetchRequest: NSFetchRequest<Document> = Document.fetchRequest()
+        fetchRequest.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)] // order results by document name ascending
         
         do {
             if (searchString != "") {
@@ -83,31 +93,22 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         }
     }
     
-    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
-
-        self.searchController?.dismiss(animated: true, completion: {
-            () in
-            print("Did complete")
-            self.searchController?.isActive = false
-            
-        })
+    func deleteDocument(at indexPath: IndexPath) {
+        let document = documents[indexPath.row]
         
-        /*
-        DispatchQueue.main.async {
-            self.searchController?.isActive = false
+        if let managedObjectContext = document.managedObjectContext {
+            managedObjectContext.delete(document)
             
-            self.searchController?.dismiss(animated: true, completion: {
-                () in
-                print("Did complete")
-            })
-            
-            //self.searchController.isActive = false
-            // self.navigationController?.navigationBar.topItem?.title = "Documents"
-            //self.navigationItem.titleView = nil
+            do {
+                try managedObjectContext.save()
+                self.documents.remove(at: indexPath.row)
+                documentsTableView.deleteRows(at: [indexPath], with: .automatic)
+            } catch {
+                alertNotifyUser(message: "Delete failed.")
+                documentsTableView.reloadData()
+            }
         }
-        */
     }
-    
     
     func numberOfSections(in tableView: UITableView) -> Int {
         return 1
@@ -122,10 +123,10 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         
         if let cell = cell as? DocumentTableViewCell {
             let document = documents[indexPath.row]
-            cell.nameLabel.text = document.getName()
-            cell.sizeLabel.text = String(document.getSize()) + " bytes"
+            cell.nameLabel.text = document.name
+            cell.sizeLabel.text = String(document.size) + " bytes"
             
-            if let modifiedDate = document.getModifiedDate() {
+            if let modifiedDate = document.modifiedDate {
                 cell.modifiedLabel.text = dateFormatter.string(from: modifiedDate)
             } else {
                 cell.modifiedLabel.text = "unknown"
@@ -148,26 +149,24 @@ class DocumentsViewController: UIViewController, UITableViewDataSource, UITableV
         }
     }
     
-    func deleteDocument(at indexPath: IndexPath) {
-        let document = documents[indexPath.row]
-        
-        if let managedObjectContext = document.managedObjectContext {
-            managedObjectContext.delete(document)
-            
-            do {
-                try managedObjectContext.save()
-                self.documents.remove(at: indexPath.row)
-                documentsTableView.deleteRows(at: [indexPath], with: .automatic)
-            } catch {
-                print("Delete failed.")
-                documentsTableView.reloadData()
-            }
-        }
-    }
+    // There are two approaches to implementing deletion of table view cells.  Both are provided below.
     
+    // Approach 1: using editing style
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             deleteDocument(at: indexPath)
         }
     }
+    
+    /*
+     // Approach 2: using editing actions
+     func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
+        let delete = UITableViewRowAction(style: .destructive, title: "Delete") {
+            action, index in
+            self.deleteDocument(at: indexPath)  // self is required because inside of closure
+        }
+     
+        return [delete]
+     }
+     */
 }

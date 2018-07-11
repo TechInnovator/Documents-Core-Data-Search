@@ -20,9 +20,9 @@ class DocumentViewController: UIViewController {
         title = ""
 
         if let document = document {
-            let name = document.getName()
+            let name = document.name
             nameTextField.text = name
-            contentTextView.text = document.getContent()
+            contentTextView.text = document.content
             title = name
         }
     }
@@ -31,10 +31,23 @@ class DocumentViewController: UIViewController {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
     }
+    
+    func alertNotifyUser(message: String) {
+        let alert = UIAlertController(title: "Alert", message: message, preferredStyle: UIAlertControllerStyle.alert)
+        alert.addAction(UIAlertAction(title: "OK", style: UIAlertActionStyle.cancel, handler: nil))
+        
+        self.present(alert, animated: true, completion: nil)
+    }
 
     @IBAction func save(_ sender: Any) {
-        guard let name = nameTextField.text, name != "" else {
-            print("A title is required. Document not saved.")
+        guard let name = nameTextField.text else {
+            alertNotifyUser(message: "Document not saved.\nThe name is not accessible.")
+            return
+        }
+        
+        let documentName = name.trimmingCharacters(in: .whitespaces)
+        if (documentName == "") {
+            alertNotifyUser(message: "Document not saved.\nA name is required.")
             return
         }
         
@@ -42,10 +55,10 @@ class DocumentViewController: UIViewController {
         
         if document == nil {
             // document doesn't exist, create new one
-            document = Document(name: name, content: content)
+            document = Document(name: documentName, content: content)
         } else {
             // document exists, update existing one
-            document?.update(name: name, content: content)
+            document?.update(name: documentName, content: content)
         }
         
         if let document = document {
@@ -53,10 +66,10 @@ class DocumentViewController: UIViewController {
                 let managedContext = document.managedObjectContext
                 try managedContext?.save()
             } catch {
-                print("Context could not be saved")
+                alertNotifyUser(message: "The document context could not be saved.")
             }
         } else {
-            print("Document could not be created.")
+            alertNotifyUser(message: "The document could not be created.")
         }
         
         navigationController?.popViewController(animated: true)
